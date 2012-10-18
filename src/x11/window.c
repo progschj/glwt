@@ -100,3 +100,16 @@ void glwtWindowShow(GLWTWindow *win, int show)
         XUnmapWindow(glwt.x11.display, win->x11.window);
     XFlush(glwt.x11.display);
 }
+
+void glwtGrabCursor(GLWTWindow *win, int grab)
+{
+    unsigned int mask = ButtonPressMask | ButtonReleaseMask | PointerMotionMask | FocusChangeMask | EnterWindowMask | LeaveWindowMask;
+    if(grab)
+    {
+        int err = XGrabPointer(glwt.x11.display, win->x11.window, True, mask, GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
+        if(err != 0)
+            glwtErrorPrintf("XGrabPointer failed");
+    }
+    else
+        XUngrabPointer(glwt.x11.display, CurrentTime);
+}
