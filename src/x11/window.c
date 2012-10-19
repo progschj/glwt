@@ -11,6 +11,8 @@ GLWTWindow *glwtWindowCreate(
     GLWTWindow *win = calloc(1, sizeof(GLWTWindow));
     if(!win)
         return 0;
+    
+    win->x11.transparentCursor = 0;
 
     (void)title; // TODO: set window title
     if(win_callbacks)
@@ -101,15 +103,73 @@ void glwtWindowShow(GLWTWindow *win, int show)
     XFlush(glwt.x11.display);
 }
 
-void glwtGrabCursor(GLWTWindow *win, int grab)
+void glwtGrabPointer(GLWTWindow *win, int grab)
 {
-    unsigned int mask = ButtonPressMask | ButtonReleaseMask | PointerMotionMask | FocusChangeMask | EnterWindowMask | LeaveWindowMask;
+    unsigned int mask 
+        = ButtonPressMask 
+        | ButtonReleaseMask 
+        | PointerMotionMask 
+        | FocusChangeMask 
+        | EnterWindowMask 
+        | LeaveWindowMask;
+        
     if(grab)
     {
         int err = XGrabPointer(glwt.x11.display, win->x11.window, True, mask, GrabModeAsync, GrabModeAsync, None, None, CurrentTime);
-        if(err != 0)
-            glwtErrorPrintf("XGrabPointer failed");
+        switch(err)
+        {
+            case BadCursor:
+                glwtErrorPrintf("XGrabPointer failed (BadCursor)");
+                return;
+            case BadValue:
+                glwtErrorPrintf("XGrabPointer failed (BadValue)");
+                return;
+            case BadWindow:
+                glwtErrorPrintf("XGrabPointer failed (BadWindow)");
+                return;
+            default: // OK
+                return;
+        }
     }
     else
         XUngrabPointer(glwt.x11.display, CurrentTime);
+}
+
+void createTransparentCursor(GLWTWindow *win)
+{
+    static const char bitmap_data[] = { 0 };
+    Pixmap pixmap = XCreateBitmapFromData(glwt.x11.display, win->x11.window, bitmap_data, 1, 1);
+    if(pixmap == None)
+        glwtErrorPrintf("failed to create pixmap for empty cursor");
+    
+    XColor black;
+    black.pixel = BlackPixel(glwt.x11.display, glwt.x11.screen_num);
+    XQueryColor(glwt.x11.display, glwt.x11.colormap, &black);
+            
+    win->x11.transparentCursor = XCreatePixmapCursor(glwt.x11.display, pixmap, pixmap, &black, &black, 0, 0);
+    XFreePixmap(glwt.x11.display, pixmap);
+
+    if(!win->x11.transparentCursor)
+        glwtErrorPrintf("failed to create empty cursor");
+
+}
+
+void glwtShowPointer(GLWTWindow *win, int show)
+{
+    if(!show)
+    {
+        if(win->x11.transparentCursor == 0)
+            createTransparentCursor(win);
+        XDefineCursor(glwt.x11.display, win->x11.window, win->x11.transparentCursor);
+    }
+    else
+    {
+        XUndefineCursor(glwt.x11.display, win->x11.window);
+    }
+}
+
+void glwtWarpPointer(GLWTWindow *win, int x, int y)
+{
+    if(XWarpPointer(glwt.x11.display, None, win->x11.window, 0, 0, 0, 0, x, y) == BadWindow)
+        glwtErrorPrintf("failed to warp pointer (BadWindow)"); 
 }

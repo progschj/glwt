@@ -36,6 +36,7 @@ struct glwt_x11
 struct glwt_window_x11
 {
     Window window;
+    Cursor transparentCursor;
 };
 
 #endif
