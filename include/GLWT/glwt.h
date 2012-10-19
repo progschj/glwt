@@ -68,9 +68,9 @@ void glwtSwapInterval(GLWTWindow *win, int interval);
 
 int glwtEventHandle(int wait);
 
-void glwtGrabPointer(GLWTWindow *window, int grab);
-void glwtShowPointer(GLWTWindow *window, int show);
-void glwtWarpPointer(GLWTWindow *window, int x, int y);
+void glwtPointerGrab(GLWTWindow *window, int grab);
+void glwtPointerShow(GLWTWindow *window, int show);
+void glwtPointerWarp(GLWTWindow *window, int x, int y);
 
 #ifdef __cplusplus
 }

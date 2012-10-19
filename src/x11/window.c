@@ -103,7 +103,7 @@ void glwtWindowShow(GLWTWindow *win, int show)
     XFlush(glwt.x11.display);
 }
 
-void glwtGrabPointer(GLWTWindow *win, int grab)
+void glwtPointerGrab(GLWTWindow *win, int grab)
 {
     unsigned int mask 
         = ButtonPressMask 
@@ -154,7 +154,7 @@ void createTransparentCursor(GLWTWindow *win)
 
 }
 
-void glwtShowPointer(GLWTWindow *win, int show)
+void glwtPointerShow(GLWTWindow *win, int show)
 {
     if(!show)
     {
@@ -168,7 +168,7 @@ void glwtShowPointer(GLWTWindow *win, int show)
     }
 }
 
-void glwtWarpPointer(GLWTWindow *win, int x, int y)
+void glwtPointerWarp(GLWTWindow *win, int x, int y)
 {
     if(XWarpPointer(glwt.x11.display, None, win->x11.window, 0, 0, 0, 0, x, y) == BadWindow)
         glwtErrorPrintf("failed to warp pointer (BadWindow)"); 
