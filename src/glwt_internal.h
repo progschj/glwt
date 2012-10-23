@@ -13,6 +13,7 @@
     #include <osx/glwt_osx.h>
 #elif defined(RASPBERRYPI)
     #include <rpi/glwt_rpi.h>
+    #include <linux/glwt_linux_input.h>
 #else
     #include <x11/glwt_x11.h>
 
@@ -46,6 +47,7 @@ struct glwt
     struct glwt_osx osx;
 #elif defined(RASPBERRYPI)
     struct glwt_rpi rpi;
+    struct glwt_linux_input linux_input;
 #else
     struct glwt_x11 x11;
     #ifndef GLWT_USE_EGL

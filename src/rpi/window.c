@@ -10,6 +10,9 @@ GLWTWindow *glwtWindowCreate(
 {
     (void)title;
 
+    if(glwt.rpi.win != 0)
+      return 0;
+
     GLWTWindow *win = calloc(1, sizeof(GLWTWindow));
     if(!win)
         return 0;
@@ -52,6 +55,7 @@ GLWTWindow *glwtWindowCreate(
     if(glwtWindowCreateEGL(win, share) != 0)
         goto error;
 
+    glwt.rpi.win = win;
 
     return win;
 error:
@@ -73,6 +77,7 @@ void glwtWindowDestroy(GLWTWindow *win)
     vc_dispmanx_update_submit_sync( dispman_update );
 
     free(win);
+    glwt.rpi.win = 0;
 }
 
 void glwtWindowShow(GLWTWindow *win, int show)

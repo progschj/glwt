@@ -31,6 +31,9 @@ int glwtInit(
 
     if(0 > graphics_get_display_size(0, &glwt.rpi.width, &glwt.rpi.height))
         goto error;
+    
+    if(glwtInitLinux() != 0)
+        goto error;
 
     set_echo(0);
 
@@ -44,6 +47,8 @@ void glwtQuit()
 {   
     set_echo(1);
 
+    glwtQuitLinux();
+     
     glwtQuitEGL();
 
     vc_dispmanx_display_close(glwt.rpi.dispman_display);

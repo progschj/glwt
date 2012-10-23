@@ -15,6 +15,7 @@ elseif (RASPBERRYPI)
         rpi/glwt_rpi.c
         rpi/window.c
         rpi/events.c
+        linux/glwt_linux_input.c
         )
     
     list(APPEND GLWT_DEPENDENCY_LIBRARIES ${BROADCOM_LIBRARY})
@@ -27,11 +28,11 @@ elseif (RASPBERRYPI)
     find_library(GLESV2_LIBRARY GLESv2 HINTS /opt/vc/lib)
     mark_as_advanced(GLESV2_LIBRARY)
     if(GLESV2_LIBRARY)
-        message("found GLESv2")
         list(APPEND GLWT_DEPENDENCY_LIBRARIES ${GLESV2_LIBRARY})
     endif()
 
     add_definitions(-DRASPBERRYPI)
+
 else()
     find_package(X11 REQUIRED)
     list(APPEND GLWT_DEPENDENCY_LIBRARIES ${X11_LIBRARIES})
