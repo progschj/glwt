@@ -33,6 +33,7 @@ extern "C" {
 struct glwt
 {
     void (*error_callback)(const char *msg, void *userdata);
+    void (*app_callback)(const GLWTAppEvent *event, void *userdata);
     void *userdata;
 
     int api;

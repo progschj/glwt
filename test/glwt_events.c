@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
         .api_version_minor = 0
     };
 
-    if(glwtInit(&glwt_config, error_callback, NULL) != 0)
+    if(glwtInit(&glwt_config, error_callback, NULL, NULL) != 0)
         goto error;
 
     GLWTWindow *window = 0;

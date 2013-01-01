@@ -18,9 +18,12 @@ static void set_echo(int on)
 int glwtInit(
     const GLWTConfig *config,
     void (*error_callback)(const char *msg, void *userdata),
+    void (*app_callback)(const GLWTAppEvent *event, void *userdata),
     void *userdata)
 {
     glwt.error_callback = error_callback;
+
+    glwt.app_callback = app_callback;
     glwt.userdata = userdata;
 
     bcm_host_init();

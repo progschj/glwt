@@ -60,9 +60,34 @@ typedef struct GLWTWindowEvent
     };
 } GLWTWindowEvent;
 
+typedef struct GLWTAppEvent
+{
+    int deviceID;
+
+    enum {
+        GLWT_APP_BUTTON_UP,
+        GLWT_APP_BUTTON_DOWN,
+        GLWT_APP_KEY_UP,
+        GLWT_APP_KEY_DOWN,
+        GLWT_APP_AXIS_RELATIVE_MOTION,
+        GLWT_APP_AXIS_ABSOLUTE_MOTION,
+        GLWT_APP_INPUT_CONNECT,
+        GLWT_APP_INPUT_DISCONNECT,
+    } type;
+
+    union {
+        struct { int button; } button;
+        struct { int keysym, scancode, mod; } key;
+        struct { int axis, value; } relative;
+        struct { int axis, value, min, max; } absolute;
+        struct { int dummy; } dummy;
+    };
+} GLWTAppEvent;
+
 int glwtInit(
     const GLWTConfig *config,
     void (*error_callback)(const char *msg, void *userdata),
+    void (*app_callback)(const GLWTAppEvent *event, void *userdata),
     void *userdata
     );
 void glwtQuit();
