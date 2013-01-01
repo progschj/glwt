@@ -22,7 +22,6 @@ int glwtInit(
     void *userdata)
 {
     glwt.error_callback = error_callback;
-
     glwt.app_callback = app_callback;
     glwt.userdata = userdata;
 
