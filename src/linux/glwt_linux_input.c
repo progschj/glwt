@@ -134,34 +134,46 @@ static void glwtHandleRelEvent(GLWTWindow *win, struct input_event event)
     {
     case REL_X:
         glwt.linux_input.mouse.x += event.value;
-        wevent.type = GLWT_WINDOW_MOUSE_MOTION;
-        wevent.motion.buttons = glwt.linux_input.mouse.buttons;
-        wevent.motion.x = glwt.linux_input.mouse.x;
-        wevent.motion.y = glwt.linux_input.mouse.y;
         if(win->win_callback)
+        {
+            wevent.type = GLWT_WINDOW_MOUSE_MOTION;
+            wevent.motion.buttons = glwt.linux_input.mouse.buttons;
+            wevent.motion.x = glwt.linux_input.mouse.x;
+            wevent.motion.y = glwt.linux_input.mouse.y;
+
             win->win_callback(
                 win,
                 &wevent,
                 win->userdata
             );
+        }
         break;
     case REL_Y:
         glwt.linux_input.mouse.y += event.value;
-        wevent.type = GLWT_WINDOW_MOUSE_MOTION;
-        wevent.motion.buttons = glwt.linux_input.mouse.buttons;
-        wevent.motion.x = glwt.linux_input.mouse.x;
-        wevent.motion.y = glwt.linux_input.mouse.y;
-        if(win->win_callback)
+	if(win->win_callback)
+        {
+            wevent.type = GLWT_WINDOW_MOUSE_MOTION;
+            wevent.motion.buttons = glwt.linux_input.mouse.buttons;
+            wevent.motion.x = glwt.linux_input.mouse.x;
+            wevent.motion.y = glwt.linux_input.mouse.y;
+        
             win->win_callback(
                 win,
                 &wevent,
                 win->userdata
             );
+        }
         break;
     default:
         return;
     }
 }
+
+static void glwtHandleAbsEvent(GLWTWindow *win, struct input_event event)
+{
+
+}
+
 
 static void glwtUpdateMod(int key, int value)
 {
@@ -210,31 +222,37 @@ static void glwtHandleKeyEvent(GLWTWindow *win, struct input_event event)
 
     if(key != GLWT_KEY_UNKNOWN)
     {
-        GLWTWindowEvent wevent;
-        wevent.type = event.value==0 ? GLWT_WINDOW_KEY_UP : GLWT_WINDOW_KEY_DOWN;
-        wevent.key.scancode = key;
-        wevent.key.mod = glwt.linux_input.keyboard.mod;
-        if(win->win_callback)
+        if(win && win->win_callback)
+        {
+            GLWTWindowEvent wevent;
+            wevent.type = event.value==0 ? GLWT_WINDOW_KEY_UP : GLWT_WINDOW_KEY_DOWN;
+            wevent.key.scancode = key;
+            wevent.key.mod = glwt.linux_input.keyboard.mod;
+
             win->win_callback(
                 win,
                 &wevent,
                 win->userdata
             );
+        }
     }
     else if((unsigned)(event.code-BTN_MOUSE)<8)
     {
-        GLWTWindowEvent wevent;
-        wevent.type = event.value==0 ? GLWT_WINDOW_BUTTON_UP : GLWT_WINDOW_BUTTON_DOWN;
-        wevent.button.button = event.code-BTN_MOUSE;
-        wevent.button.mod = glwt.linux_input.keyboard.mod;
-        wevent.button.x = glwt.linux_input.mouse.x;
-        wevent.button.y = glwt.linux_input.mouse.y;
-        if(win->win_callback)
+        if(win && win->win_callback)
+        {
+            GLWTWindowEvent wevent;
+            wevent.type = event.value==0 ? GLWT_WINDOW_BUTTON_UP : GLWT_WINDOW_BUTTON_DOWN;
+            wevent.button.button = event.code-BTN_MOUSE;
+            wevent.button.mod = glwt.linux_input.keyboard.mod;
+            wevent.button.x = glwt.linux_input.mouse.x;
+            wevent.button.y = glwt.linux_input.mouse.y;
+ 
             win->win_callback(
                 win,
                 &wevent,
                 win->userdata
             );
+	}
         if(event.value)
             glwt.linux_input.mouse.buttons |= 1<<(event.code-BTN_MOUSE);
         else
@@ -255,7 +273,7 @@ static void glwtHandleInputEvent(GLWTWindow *win, struct epoll_event *ep_event)
             glwtHandleKeyEvent(win, event);
             break;
         case EV_ABS:
-            printf("abs event\n");
+            glwtHandleAbsEvent(win, event);
             break;
         case EV_REL:
             glwtHandleRelEvent(win, event);
