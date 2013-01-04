@@ -134,7 +134,7 @@ static void glwtHandleRelEvent(GLWTWindow *win, struct input_event event)
     {
     case REL_X:
         glwt.linux_input.mouse.x += event.value;
-        if(win->win_callback)
+        if(win && win->win_callback)
         {
             wevent.type = GLWT_WINDOW_MOUSE_MOTION;
             wevent.motion.buttons = glwt.linux_input.mouse.buttons;
@@ -150,7 +150,7 @@ static void glwtHandleRelEvent(GLWTWindow *win, struct input_event event)
         break;
     case REL_Y:
         glwt.linux_input.mouse.y += event.value;
-	if(win->win_callback)
+	if(win && win->win_callback)
         {
             wevent.type = GLWT_WINDOW_MOUSE_MOTION;
             wevent.motion.buttons = glwt.linux_input.mouse.buttons;
