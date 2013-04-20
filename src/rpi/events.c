@@ -2,6 +2,5 @@
 
 int glwtEventHandle(int wait)
 {
-    glwtEventHandleLinux(glwt.rpi.win, wait);
-    return 0;
+    return glwtEventHandleLinux(glwt.rpi.win, wait);
 }
