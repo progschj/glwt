@@ -42,17 +42,29 @@ elseif (RASPBERRYPI)
 
     find_path(BROADCOM_INCLUDE bcm_host.h HINTS /opt/vc/include)
     find_path(VCOS_INCLUDE vcos_platform_types.h HINTS /opt/vc/include/interface/vcos/pthreads)
-
     include_directories(${BROADCOM_INCLUDE} ${VCOS_INCLUDE})
 
-    find_library(GLESV2_LIBRARY GLESv2 HINTS /opt/vc/lib)
-    mark_as_advanced(GLESV2_LIBRARY)
-    if(GLESV2_LIBRARY)
+    find_path(VCHOST_CONFIG_INCLUDE vchost_config.h HINTS /opt/vc/include/interface/vmcs_host/linux)
+
+    if(VCHOST_CONFIG_INCLUDE)
+        include_directories(${VCHOST_CONFIG_INCLUDE})
+    endif()
+    
+    find_library(GLESv2_LIBRARY GLESv2 HINTS /opt/vc/lib)
+    mark_as_advanced(GLESv2_LIBRARY)
+    if(GLESv2_LIBRARY)
         message("found GLESv2")
         list(APPEND GLWT_DEPENDENCY_LIBRARIES ${GLESV2_LIBRARY})
     endif()
 
     add_definitions(-DRASPBERRYPI)
+
+    list(APPEND GLWT_SOURCES
+        linux/glwt_linux_input.c
+        )
+
+    add_definitions(-DGLWT_USE_LINUX_INPUT)
+
 else()
     find_package(X11 REQUIRED)
     list(APPEND GLWT_DEPENDENCY_LIBRARIES ${X11_LIBRARIES})

@@ -8,6 +8,7 @@ struct glwt_rpi
 {
     DISPMANX_DISPLAY_HANDLE_T dispman_display;
     uint32_t width, height;
+    struct GLWTWindow *win;
 };
 
 struct glwt_window_rpi

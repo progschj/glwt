@@ -24,6 +24,9 @@
 #ifdef GLWT_USE_EGL
     #include <egl/glwt_egl.h>
 #endif
+#ifdef GLWT_USE_LINUX_INPUT
+    #include <linux/glwt_linux_input.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,6 +57,9 @@ struct glwt
 #endif
 #ifdef GLWT_USE_EGL
     struct glwt_egl egl;
+#endif
+#ifdef GLWT_USE_LINUX_INPUT
+    struct glwt_linux_input linux_input;
 #endif
 };
 

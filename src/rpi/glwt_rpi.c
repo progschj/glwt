@@ -34,6 +34,9 @@ int glwtInit(
 
     set_echo(0);
 
+    if(glwtInitLinux() != 0)
+        goto error;
+
     return 0;
 error:
     glwtQuit();
@@ -42,6 +45,8 @@ error:
 
 void glwtQuit()
 {
+    glwtQuitLinux();
+
     set_echo(1);
 
     glwtQuitEGL();

@@ -10,9 +10,14 @@ GLWTWindow *glwtWindowCreate(
 {
     (void)title;
 
+    if(glwt.rpi.win != 0)
+        return 0;
+
     GLWTWindow *win = calloc(1, sizeof(GLWTWindow));
     if(!win)
         return 0;
+
+    glwt.rpi.win = win;
 
     win->win_callback = win_callback;
     win->userdata = userdata;
@@ -78,6 +83,8 @@ void glwtWindowDestroy(GLWTWindow *win)
     vc_dispmanx_update_submit_sync( dispman_update );
 
     free(win);
+
+    glwt.rpi.win = 0;
 }
 
 void glwtWindowShow(GLWTWindow *win, int show)
