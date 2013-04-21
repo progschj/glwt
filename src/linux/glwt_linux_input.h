@@ -1,8 +1,10 @@
 #ifndef GLWT_glwt_linux_input_h
 #define GLWT_glwt_linux_input_h
 
+#include <linux/input.h>
+
 struct glwt_abs_axis {
-    int index, min, max;
+    int min, max;
 };
 
 struct glwt_device_capabilities {
@@ -13,14 +15,16 @@ struct glwt_device_capabilities {
     int mouse_buttons;
     int rel_axes;
     int abs_axes;
-    struct glwt_abs_axis *axes;
-    int *axis_indices;
+    struct glwt_abs_axis axes[ABS_CNT];
 };
 
+#define GLWT_MAX_DEVICE_FILE_NAME_LENGTH 32
+#define GLWT_MAX_DEVICE_NAME_LENGTH 128
+
 struct glwt_input_device {
-    char name[32];
+    char device_file_name[GLWT_MAX_DEVICE_FILE_NAME_LENGTH];
     int fd;
-    char device_name[128];
+    char device_name[GLWT_MAX_DEVICE_NAME_LENGTH];
     struct glwt_device_capabilities capabilities;
     struct glwt_input_device *next;
 };

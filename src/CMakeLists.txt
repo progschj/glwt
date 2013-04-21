@@ -49,7 +49,7 @@ elseif (RASPBERRYPI)
     if(VCHOST_CONFIG_INCLUDE)
         include_directories(${VCHOST_CONFIG_INCLUDE})
     endif()
-    
+
     find_library(GLESv2_LIBRARY GLESv2 HINTS /opt/vc/lib)
     mark_as_advanced(GLESv2_LIBRARY)
     if(GLESv2_LIBRARY)

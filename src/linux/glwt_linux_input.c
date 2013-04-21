@@ -7,7 +7,6 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <linux/input.h>
 #include <dirent.h>
 #include <sys/epoll.h>
 #include <sys/inotify.h>
@@ -29,35 +28,21 @@ static void find_device_capabilities(int fd, struct glwt_device_capabilities *ca
     memset(types, 0, sizeof(types));
     ioctl(fd, EVIOCGBIT(0, EV_MAX), types);
 
-    capabilities->axes = 0;
     if(get_bit(types, EV_ABS))
     {
         memset(events, 0, sizeof(events));
         ioctl(fd, EVIOCGBIT(EV_ABS, KEY_MAX), events);
 
         capabilities->abs_axes = 0;
-        capabilities->axis_indices = 0;
         for(int j=0;j<ABS_MAX;++j)
-        capabilities->abs_axes += get_bit(events, j);
-        if(capabilities->abs_axes > 0)
         {
-            capabilities->axes = malloc(sizeof(struct glwt_abs_axis)*capabilities->abs_axes);
-            capabilities->axis_indices = malloc(sizeof(int)*ABS_MAX);
-
-            int i = 0;
-            for(int j=0;j<ABS_MAX;++j)
+            if(get_bit(events, j))
             {
-                capabilities->axis_indices[j] = ABS_MAX;
-                if(get_bit(events, j))
-                {
-                    struct input_absinfo abs;
-                    ioctl(fd, EVIOCGABS(j), &abs);
-                    capabilities->axes[i].index = j;
-                    capabilities->axes[i].min = abs.minimum;
-                    capabilities->axes[i].max = abs.maximum;
-                    capabilities->axis_indices[j] = i;
-                    ++i;
-                }
+                capabilities->abs_axes += 1;
+                struct input_absinfo abs;
+                ioctl(fd, EVIOCGABS(j), &abs);
+                capabilities->axes[j].min = abs.minimum;
+                capabilities->axes[j].max = abs.maximum;
             }
         }
     }
@@ -84,9 +69,9 @@ static void find_device_capabilities(int fd, struct glwt_device_capabilities *ca
         capabilities->gamepad_buttons = 0;
         for(int j=0;j<KEY_MAX;++j)
         {
-            capabilities->total_keys += get_bit(events, j);
             if(get_bit(events, j))
             {
+                capabilities->total_keys += 1;
                 if(j<BTN_MOUSE)
                     capabilities->keyboard_keys += 1;
                 else if(j<BTN_JOYSTICK)
@@ -115,24 +100,22 @@ static int add_device(const char *name)
         }
     }
 
-    struct epoll_event event;
-    event.events = EPOLLIN | EPOLLET;
-    event.data.fd = fd;
-
-    epoll_ctl(glwt.linux_input.epoll_fd, EPOLL_CTL_ADD, fd, &event);
 
     struct glwt_input_device *device = malloc(sizeof(struct glwt_input_device));
 
-    device->fd = fd;
-    strncpy(device->name, name, 32);
-    ioctl(fd, EVIOCGNAME(128), device->device_name);
+    struct epoll_event event;
+    event.events = EPOLLIN | EPOLLET;
+    event.data.ptr = device;
+    //event.data.fd = fd;
 
+    epoll_ctl(glwt.linux_input.epoll_fd, EPOLL_CTL_ADD, fd, &event);
+
+    device->fd = fd;
+    strncpy(device->device_file_name, name, GLWT_MAX_DEVICE_FILE_NAME_LENGTH);
+    ioctl(fd, EVIOCGNAME(GLWT_MAX_DEVICE_NAME_LENGTH), device->device_name);
     find_device_capabilities(fd, &(device->capabilities));
 
-    fprintf(stderr, "%s\n", device->device_name);
-
     device->next = glwt.linux_input.devices;
-
     glwt.linux_input.devices = device;
 
     glwt.linux_input.device_count++;
@@ -147,7 +130,7 @@ static struct glwt_input_device* find_device_by_name(const char *name)
     struct glwt_input_device *current = glwt.linux_input.devices;
     while(current != 0)
     {
-        if(strcmp(current->name, name) == 0)
+        if(strcmp(current->device_file_name, name) == 0)
             return current;
         else
             current = current->next;
@@ -155,37 +138,24 @@ static struct glwt_input_device* find_device_by_name(const char *name)
     return 0;
 }
 
-static struct glwt_input_device* find_device_by_fd(int fd)
+static int remove_device(struct glwt_input_device *device)
 {
+    struct glwt_input_device **prev = &glwt.linux_input.devices;
     struct glwt_input_device *current = glwt.linux_input.devices;
     while(current != 0)
     {
-        if(current->fd == fd)
-            return current;
-        else
-            current = current->next;
-    }
-    return 0;
-}
-
-static int remove_device(const char *name)
-{
-    struct glwt_input_device **prev = &glwt.linux_input.devices;
-    struct glwt_input_device *device = glwt.linux_input.devices;
-    while(device != 0)
-    {
-        if(strcmp(device->name, name) == 0)
+        if(current == device)
             break;
         else
         {
-            prev = &(device->next);
-            device = device->next;
+            prev = &(current->next);
+            current = current->next;
         }
     }
 
-    if(device == 0)
+    if(current == 0)
     {
-        glwtErrorPrintf("removing unknown device %s", name);
+        glwtErrorPrintf("removing unknown device");
         return -1;
     }
 
@@ -193,7 +163,7 @@ static int remove_device(const char *name)
 
     if(epoll_ctl(glwt.linux_input.epoll_fd, EPOLL_CTL_DEL, device->fd, 0) != 0)
     {
-        glwtErrorPrintf("failed to remove device %s from epoll", name);
+        glwtErrorPrintf("failed to remove device from epoll");
         return -1;
     }
     /*
@@ -217,8 +187,7 @@ static void free_devices()
     while(current != 0)
     {
         struct glwt_input_device *next = current->next;
-        free(current->capabilities.axes);
-        free(current->capabilities.axis_indices);
+        close(current->fd);
         free(current);
         current = next;
     }
@@ -260,7 +229,7 @@ int glwtInitLinux()
 
     struct epoll_event event;
     event.events = EPOLLIN | EPOLLET;
-    event.data.fd = glwt.linux_input.inotify_fd;
+    event.data.ptr = 0;
 
     epoll_ctl(glwt.linux_input.epoll_fd, EPOLL_CTL_ADD, glwt.linux_input.inotify_fd, &event);
 
@@ -278,9 +247,6 @@ void glwtQuitLinux()
     if(glwt.linux_input.epoll_fd > 0)
         close(glwt.linux_input.epoll_fd);
 
-    for(int i = 0; i<glwt.linux_input.device_count; ++i)
-        close(glwt.linux_input.devices[i].fd);
-
     free_devices();
     memset(&glwt.linux_input, 0, sizeof(struct glwt_linux_input));
 }
@@ -291,7 +257,12 @@ static void glwtHandleRelEvent(GLWTWindow *win, struct input_event event)
     switch(event.code)
     {
     case REL_X:
-        glwt.linux_input.mouse.x += event.value;
+    case REL_Y:
+        if(event.code == REL_X)
+            glwt.linux_input.mouse.x += event.value;
+        else
+            glwt.linux_input.mouse.y += event.value;
+
         if(win && win->win_callback)
         {
             wevent.type = GLWT_WINDOW_MOUSE_MOTION;
@@ -306,21 +277,8 @@ static void glwtHandleRelEvent(GLWTWindow *win, struct input_event event)
             );
         }
         break;
-    case REL_Y:
-        glwt.linux_input.mouse.y += event.value;
-        if(win && win->win_callback)
-        {
-            wevent.type = GLWT_WINDOW_MOUSE_MOTION;
-            wevent.motion.buttons = glwt.linux_input.mouse.buttons;
-            wevent.motion.x = glwt.linux_input.mouse.x;
-            wevent.motion.y = glwt.linux_input.mouse.y;
 
-            win->win_callback(
-                win,
-                &wevent,
-                win->userdata
-            );
-        }
+    case REL_WHEEL:
         break;
     default:
         return;
@@ -388,13 +346,14 @@ static void glwtHandleKeyEvent(GLWTWindow *win, struct input_event event)
 
     glwtUpdateMod(key, event.value);
 
-    if(key != GLWT_KEY_UNKNOWN)
+    if(event.code < BTN_MISC || event.code >= KEY_OK)
     {
         if(win && win->win_callback)
         {
             GLWTWindowEvent wevent;
             wevent.type = event.value==0 ? GLWT_WINDOW_KEY_UP : GLWT_WINDOW_KEY_DOWN;
-            wevent.key.scancode = key;
+            wevent.key.keysym = key;
+            wevent.key.scancode = event.code;
             wevent.key.mod = glwt.linux_input.keyboard.mod;
 
             win->win_callback(
@@ -404,7 +363,7 @@ static void glwtHandleKeyEvent(GLWTWindow *win, struct input_event event)
             );
         }
     }
-    else if((unsigned)(event.code-BTN_MOUSE)<8)
+    else if(BTN_MOUSE <= event.code && event.code < BTN_JOYSTICK)
     {
         if(win && win->win_callback)
         {
@@ -443,7 +402,8 @@ static int glwtHandleInputEvent(GLWTWindow *win, struct epoll_event *ep_event)
 
     int result = 0;
 
-    while(read(ep_event->data.fd, &event, sizeof(event)) > 0)
+    struct glwt_input_device *device = (struct glwt_input_device*)(ep_event->data.ptr);
+    while(read(device->fd, &event, sizeof(event)) > 0)
     {
         switch(event.type)
         {
@@ -456,7 +416,6 @@ static int glwtHandleInputEvent(GLWTWindow *win, struct epoll_event *ep_event)
         case EV_REL:
             glwtHandleRelEvent(win, event);
             break;
-
         }
     }
 
@@ -471,12 +430,10 @@ static int glwtHandleHangup(struct epoll_event *ep_event)
         goto error;
     }
 
-    struct glwt_input_device *device = find_device_by_fd(ep_event->data.fd);
+    struct glwt_input_device *device = (struct glwt_input_device*)(ep_event->data.ptr);
 
-    if(device != 0)
-    {
-        remove_device(device->name);
-    }
+    remove_device(device);
+
     return 0;
 error:
     return -1;
@@ -484,11 +441,13 @@ error:
 
 static int glwtHandleInotifyEvent(struct epoll_event *ep_event)
 {
+    (void)ep_event;
+
     char buffer[256];
 
     while(1)
     {
-        int length = read(ep_event->data.fd, buffer, sizeof(buffer));
+        int length = read(glwt.linux_input.inotify_fd, buffer, sizeof(buffer));
         if(length<=0)
             break;
         int pos = 0;
@@ -501,6 +460,11 @@ static int glwtHandleInotifyEvent(struct epoll_event *ep_event)
                 char name[20];
                 snprintf(name, sizeof(name), "/dev/input/%s", event->name);
 
+                // devices can become "openable" after either being
+                // created or having their rights changed so we have to
+                // listen to both events. But we also have to make sure
+                // to not insert them twice if we can open them after
+                // both events.
                 if(event->mask & (IN_CREATE | IN_ATTRIB))
                 {
                     if(find_device_by_name(name) == 0)
@@ -530,7 +494,7 @@ int glwtEventHandleLinux(GLWTWindow *win, int wait)
         {
             if((events[i].events & EPOLLHUP) != 0)
                 result = glwtHandleHangup(events+i);
-            else if(events[i].data.fd == glwt.linux_input.inotify_fd)
+            else if(events[i].data.ptr == 0)
                 result = glwtHandleInotifyEvent(events+i);
             else
                 result = glwtHandleInputEvent(win, events+i);
